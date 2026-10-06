@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ramo de rosas rojas</title>
+  <style>
+    :root {
+      --sky-top: #CFDACB;
+      --sky-bottom: #F3EFE2;
+      --soil: #3B2A20;
+      --rose: #A50F2B;
+      --rose-light: #CF2640;
+      --velo: rgba(243, 239, 226, .55);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --sky-top: #26332D; --sky-bottom: #3B4239; --velo: rgba(38, 51, 45, .6); }
+    }
+    :root[data-theme="dark"] { --sky-top: #26332D; --sky-bottom: #3B4239; --velo: rgba(38, 51, 45, .6); }
+ 
+    * { box-sizing: border-box; margin: 0; }
+ 
+    body {
+      min-height: 100svh;
+      background: linear-gradient(var(--sky-top), var(--sky-bottom));
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+ 
+    .stage {
+      box-sizing: border-box;
+      height: 100svh;
+      padding-top: env(safe-area-inset-top, 0px);
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+ 
+    .vista {
+      position: relative;
+      min-height: 0;
+    }
+ 
+    .garden {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+ 
+    .soil {
+      box-sizing: border-box;
+      min-height: 14svh;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      background: var(--soil);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+ 
+    .replay {
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #FFF5F2;
+      background: var(--rose);
+      border: 0;
+      border-radius: 999px;
+      padding: .7rem 1.6rem;
+      cursor: pointer;
+      transition: background-color .2s, transform .2s;
+    }
+    .replay:hover { background: var(--rose-light); }
+    .replay:active { transform: scale(.97); }
+    .replay:focus-visible { outline: 3px solid #F2A0B5; outline-offset: 3px; }
+ 
+    /* ---------- Corazón con "Te amo" (aparece al presionar el botón) ---------- */
+    .amor {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      background: var(--velo);
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .5s ease, visibility 0s linear .5s;
+    }
+    .amor.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity .5s ease;
+    }
+ 
+    .amor-caja {
+      position: relative;
+      width: min(84vw, 70svh);
+      transform: scale(0);
+      filter: drop-shadow(0 10px 18px rgba(80, 0, 20, .35));
+    }
+    .amor.visible .amor-caja {
+      animation:
+        entrada-corazon .9s ease-out both,
+        latido 1.3s ease-in-out 1s infinite;
+    }
+ 
+    .corazon {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+ 
+    .te-amo {
+      position: absolute;
+      left: 50%;
+      top: 42%;
+      width: 70%;
+      margin: 0;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      font-family: "Segoe Script", "Snell Roundhand", "Brush Script MT", "Apple Chancery", cursive;
+      font-size: min(12.5vw, 10.5svh);
+      line-height: 1.15;
+      color: #FFF5F2;
+      text-shadow: 0 2px 10px rgba(60, 0, 15, .55);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .amor.visible .te-amo {
+      animation: aparece 1s ease-out .6s both;
+    }
+ 
+    @keyframes entrada-corazon {
+      0%   { transform: scale(0); }
+      60%  { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+    @keyframes latido {
+      0%, 100% { transform: scale(1); }
+      14%      { transform: scale(1.07); }
+      28%      { transform: scale(1); }
+      42%      { transform: scale(1.05); }
+      70%      { transform: scale(1); }
+    }
+    @keyframes aparece {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+ 
+    @media (prefers-reduced-motion: reduce) {
+      .amor.visible .amor-caja { animation: entrada-corazon .01s both; }
+      .amor.visible .te-amo { animation-duration: .01s; animation-delay: 0s; }
+    }
+ 
+    /* ---------- Estado inicial (antes de brotar) ---------- */
+    .stem {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+    }
+    .leaf,
+    .thorn,
+    .sepal,
+    .bud,
+    .heart,
+    .petal {
+      transform: scale(0);
+      transform-origin: 0 0;
+    }
+    .sheen { opacity: 0; }
+ 
+    /* ---------- Animación (se activa con la clase .play) ----------
+       --t / --dur = inicio y duración del crecimiento de cada tallo
+       --d         = momento en que el tallo llega a esa hoja o espina
+       --h         = momento en que cada rosa empieza a formarse
+       --l / --i   = capa del pétalo (0 exterior ... 5 interior) y posición en la capa */
+    .play .stem {
+      animation: grow var(--dur) cubic-bezier(.4, 0, .2, 1) var(--t) both;
+    }
+    .play .leaf,
+    .play .thorn {
+      animation: pop .8s cubic-bezier(.2, .9, .3, 1.15) var(--d) both;
+    }
+    .play .sepal,
+    .play .bud {
+      animation: pop .6s cubic-bezier(.2, .9, .3, 1.15) var(--h) both;
+    }
+    .play .petal {
+      animation: bloom 1.1s cubic-bezier(.2, .9, .3, 1.12)
+                 calc(var(--h) + .3s + var(--l) * .3s + var(--i) * .07s) both;
+    }
+    .play .heart {
+      animation: pop .7s cubic-bezier(.2, .9, .3, 1.3) calc(var(--h) + 2.2s) both;
+    }
+    .play .sheen {
+      animation: fade 1.2s ease-out calc(var(--h) + 2.4s) both;
+    }
+ 
+    @keyframes grow {
+      to { stroke-dashoffset: 0; }
+    }
+    @keyframes pop {
+      from { transform: scale(0); }
+      to   { transform: scale(1); }
+    }
+    @keyframes bloom {
+      from { transform: scale(0) rotate(-15deg); }
+      to   { transform: scale(1) rotate(0deg); }
+    }
+    @keyframes fade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+ 
+    @media (prefers-reduced-motion: reduce) {
+      .play .stem,
+      .play .leaf,
+      .play .thorn,
+      .play .sepal,
+      .play .bud,
+      .play .petal,
+      .play .heart,
+      .play .sheen {
+        animation-duration: .01s;
+        animation-delay: 0s;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <div class="vista">
+    <svg id="garden" class="garden play" viewBox="0 0 600 600" preserveAspectRatio="xMidYMax meet"
+         role="img" aria-label="Un ramo de tres rosas rojas juntas que brotan de un mismo tallo y se abren">
+      <defs>
+        <!-- Degradados de los pétalos: oscuros en la base, más vivos hacia el borde -->
+        <radialGradient id="g0" cx="50%" cy="100%" r="105%">
+          <stop offset="0" stop-color="#7A0A20"/><stop offset=".45" stop-color="#B8142F"/>
+          <stop offset=".85" stop-color="#D93049"/><stop offset="1" stop-color="#EC5563"/>
+        </radialGradient>
+        <radialGradient id="g1" cx="50%" cy="100%" r="105%">
+          <stop offset="0" stop-color="#5E0618"/><stop offset=".5" stop-color="#A50F2B"/>
+          <stop offset="1" stop-color="#CF2640"/>
+        </radialGradient>
+        <radialGradient id="g2" cx="50%" cy="100%" r="105%">
+          <stop offset="0" stop-color="#4A0414"/><stop offset=".5" stop-color="#8F0B25"/>
+          <stop offset="1" stop-color="#B81A35"/>
+        </radialGradient>
+        <radialGradient id="g3" cx="50%" cy="100%" r="105%">
+          <stop offset="0" stop-color="#3A030F"/><stop offset=".55" stop-color="#7A0A20"/>
+          <stop offset="1" stop-color="#A31530"/>
+        </radialGradient>
+        <!-- Brillo suave sobre la flor -->
+        <radialGradient id="brillo" cx="40%" cy="35%" r="65%">
+          <stop offset="0" stop-color="#FFFFFF" stop-opacity=".28"/>
+          <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="gHoja" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#2F6B3A"/><stop offset="1" stop-color="#5FA461"/>
+        </linearGradient>
+        <!-- Sombra que cada capa de pétalos proyecta sobre la anterior -->
+        <filter id="sombra" filterUnits="userSpaceOnUse" x="-110" y="-110" width="220" height="220"
+                color-interpolation-filters="sRGB">
+          <feDropShadow dx="0" dy="1.4" stdDeviation="1.7" flood-color="#25000A" flood-opacity=".55"/>
+        </filter>
+      </defs>
+ 
+      <!-- Tierra -->
+      <ellipse cx="300" cy="600" rx="80" ry="14" fill="#3B2A20"/>
+      <!-- El rosal se dibuja con el script de abajo -->
+    </svg>
+ 
+    <div class="amor" id="amor" aria-hidden="true">
+      <div class="amor-caja">
+        <svg class="corazon" viewBox="0 0 100 90" aria-hidden="true">
+          <defs>
+            <radialGradient id="gCorazon" cx="35%" cy="28%" r="85%">
+              <stop offset="0" stop-color="#EC5563"/><stop offset=".4" stop-color="#CF2640"/>
+              <stop offset=".8" stop-color="#A50F2B"/><stop offset="1" stop-color="#7A0A20"/>
+            </radialGradient>
+          </defs>
+          <path d="M50 84 C 12 56, 2 36, 2 24 C 2 11, 12 3, 25 3 C 36 3, 45 9, 50 18 C 55 9, 64 3, 75 3 C 88 3, 98 11, 98 24 C 98 36, 88 56, 50 84 Z"
+                fill="url(#gCorazon)" stroke="rgba(60,0,15,.35)" stroke-width="1"/>
+          <ellipse cx="28" cy="22" rx="14" ry="8" transform="rotate(-30 28 22)" fill="#FFFFFF" opacity=".22"/>
+        </svg>
+        <p class="te-amo">Te amo<br>mi yuli</p>
+      </div>
+    </div>
+    </div>
+ 
+    <div class="soil">
+      <button class="replay" id="replay" type="button" aria-pressed="false" aria-controls="amor">Volver a brotar</button>
+    </div>
+  </main>
+ 
+  <script>
+    const garden = document.getElementById('garden');
+    const f = n => (+n).toFixed(1);
+ 
+    /* ---------- Utilidades ---------- */
+ 
+    // Números aleatorios repetibles: cada rosa sale siempre igual, pero distinta a las otras
+    function rng(a) {
+      return () => {
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        let t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+ 
+    // Punto y dirección sobre una curva Bézier (para colocar hojas y espinas sobre el tallo)
+    function bez(p, t) {
+      const u = 1 - t;
+      return [0, 1].map(i =>
+        u*u*u*p[0][i] + 3*u*u*t*p[1][i] + 3*u*t*t*p[2][i] + t*t*t*p[3][i]);
+    }
+    function tan(p, t) {
+      const u = 1 - t;
+      return [0, 1].map(i =>
+        3*u*u*(p[1][i]-p[0][i]) + 6*u*t*(p[2][i]-p[1][i]) + 3*t*t*(p[3][i]-p[2][i]));
+    }
+    const grados = ([x, y]) => Math.atan2(y, x) * 180 / Math.PI;
+ 
+    /* ---------- El rosal: un tallo principal que se divide en tres ramas ----------
+       p = puntos de la curva, w = grosor, t = cuándo empieza a crecer, dur = cuánto tarda */
+    const TALLO = { p: [[300,600],[296,545],[306,480],[300,400]], w: 12, t: 0.2, dur: 1.5 };
+    const RAMAS = [
+      { p: [[300,400],[302,350],[298,290],[300,212]], w: 9.5, t: 1.65, dur: 1.3,
+        rosa: { x: 300, y: 200, k: 1.05, tilt: 0,   seed: 21 } },   // centro (queda atrás)
+      { p: [[299,422],[296,380],[240,350],[227,271]], w: 8.5, t: 1.45, dur: 1.3,
+        rosa: { x: 222, y: 252, k: 0.92, tilt: -14, seed: 7 } },    // izquierda
+      { p: [[301,430],[304,388],[360,355],[373,269]], w: 8.5, t: 1.8,  dur: 1.3,
+        rosa: { x: 378, y: 250, k: 0.90, tilt: 14,  seed: 42 } }    // derecha
+    ];
+ 
+    /* ---------- Rosa: seis capas de pétalos de afuera hacia adentro ---------- */
+    const CAPAS = [
+      { n: 6, w: 34, h: 56, d: 10, giro: 0,  g: 'g0' },
+      { n: 6, w: 31, h: 49, d: 8,  giro: 30, g: 'g1' },
+      { n: 5, w: 27, h: 41, d: 6,  giro: 15, g: 'g1' },
+      { n: 5, w: 22, h: 33, d: 4,  giro: 40, g: 'g2' },
+      { n: 4, w: 17, h: 26, d: 3,  giro: 20, g: 'g2' },
+      { n: 3, w: 13, h: 19, d: 1,  giro: 50, g: 'g3' }
+    ];
+ 
+    // Un pétalo asimétrico, con el borde superior ondulado, venas suaves y un brillo en el borde
+    function petalo(w, h, sk, g) {
+      const L = -w * (1 + sk), R = w * (1 - sk);
+      const inicio = `${f(L*.45)} ${f(-h*.95)}`;
+      const borde = `C ${f(L*.2)} ${f(-h*1.03)}, ${f(-w*.05)} ${f(-h*.93)}, 0 ${f(-h*.97)} ` +
+                    `C ${f(R*.1)} ${f(-h)}, ${f(R*.25)} ${f(-h*1.03)}, ${f(R*.5)} ${f(-h*.95)}`;
+      const cuerpo = `M0 0 C ${f(L)} ${f(-h*.05)}, ${f(L*1.15)} ${f(-h*.75)}, ${inicio} ${borde} ` +
+                     `C ${f(R*1.15)} ${f(-h*.75)}, ${f(R)} ${f(-h*.05)}, 0 0 Z`;
+      const venas = `M0 -2 C ${f(L*.3)} ${f(-h*.3)}, ${f(L*.5)} ${f(-h*.55)}, ${f(L*.4)} ${f(-h*.85)} ` +
+                    `M0 -2 L0 ${f(-h*.8)} ` +
+                    `M0 -2 C ${f(R*.3)} ${f(-h*.3)}, ${f(R*.5)} ${f(-h*.55)}, ${f(R*.4)} ${f(-h*.85)}`;
+      return `<path d="${cuerpo}" fill="url(#${g})" stroke="rgba(25,0,8,.4)" stroke-width=".8"/>` +
+             `<path d="${venas}" fill="none" stroke="rgba(0,0,0,.14)" stroke-width=".8"/>` +
+             `<path d="M${inicio} ${borde}" fill="none" stroke="rgba(255,150,160,.5)" stroke-width="1.6" stroke-linecap="round"/>`;
+    }
+ 
+    function rosa(r, h) {
+      const R = rng(r.seed);
+      let s = `<g transform="translate(${r.x} ${r.y}) rotate(${r.tilt})" style="--h:${h.toFixed(2)}s">`;
+ 
+      // Sépalos verdes que asoman por debajo de la flor
+      const L = 62 * r.k + 14;
+      [-62, -32, 0, 32, 62].forEach(a => {
+        s += `<g transform="rotate(${a})"><path class="sepal"
+               d="M0 0 C -9 ${f(L*.25)}, -7 ${f(L*.7)}, 0 ${f(L)} C 7 ${f(L*.7)}, 9 ${f(L*.25)}, 0 0 Z"
+               fill="#3E7D46" stroke="#28572F" stroke-width="1"/></g>`;
+      });
+ 
+      // Cabeza de la flor (algo aplastada para dar sensación de perspectiva)
+      s += `<g transform="scale(${r.k} ${f(r.k * .9)})">`;
+      s += `<circle class="bud" r="18" fill="url(#g3)"/>`;
+      CAPAS.forEach((c, l) => {
+        s += `<g filter="url(#sombra)">`;
+        for (let i = 0; i < c.n; i++) {
+          const ang = c.giro + i * 360 / c.n + (R() - .5) * 16;
+          const sc  = .92 + R() * .16;
+          const sk  = (R() - .5) * .4;
+          s += `<g transform="rotate(${f(ang)}) translate(0 ${-c.d}) scale(${f(sc)})">
+                  <g class="petal" style="--l:${l};--i:${i}">${petalo(c.w, c.h, sk, c.g)}</g></g>`;
+        }
+        s += `</g>`;
+      });
+ 
+      // Centro enroscado y brillo final
+      s += `<g class="heart">
+              <path d="M0 0 C 2 -3, 6 -2, 6 2 C 6 7, -1 9, -6 5 C -10 0, -6 -8, 0 -9"
+                    fill="none" stroke="#2A020A" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
+              <path d="M-1 -2 C 1 -4, 4 -3, 4 0" fill="none" stroke="#E0505F" stroke-width="1" stroke-linecap="round" opacity=".5"/>
+            </g>`;
+      s += `<ellipse class="sheen" cx="-14" cy="-18" rx="34" ry="22" transform="rotate(-25)" fill="url(#brillo)"/>`;
+      s += `</g></g>`;
+      return s;
+    }
+ 
+    /* ---------- Tallos, espinas y hojas ---------- */
+    function tallo(s) {
+      const [a, b, c, d] = s.p;
+      const trazo = `M${a} C${b} ${c} ${d}`;
+      const st = `--t:${s.t}s;--dur:${s.dur}s`;
+      return `<path class="stem" style="${st}" d="${trazo}" pathLength="100" fill="none"
+                    stroke="#2F5D34" stroke-width="${s.w}" stroke-linecap="round"/>` +
+             `<path class="stem" style="${st}" d="${trazo}" pathLength="100" fill="none"
+                    stroke="#6AA65C" stroke-width="${f(s.w * .28)}" stroke-linecap="round"
+                    transform="translate(${f(-s.w * .18)} 0)"/>`;
+    }
+ 
+    const FOLIOLO = 'M0 0 C 7 -13, 26 -15, 40 0 C 26 15, 7 13, 0 0 Z';
+    function foliolo(x, y, ang, sc) {
+      return `<g transform="translate(${x} ${y}) rotate(${ang}) scale(${sc})">
+                <path d="${FOLIOLO}" fill="url(#gHoja)" stroke="#23502B" stroke-width="1"/>
+                <path d="M0 0 C 14 -1, 28 -1, 38 0" fill="none" stroke="#2C6A38" stroke-width="1.2"/></g>`;
+    }
+    // Hoja compuesta: tres folíolos sobre un pecíolo, como las de un rosal real
+    function hoja(rama, t, lado, escala) {
+      const [x, y] = bez(rama.p, t);
+      const ang = grados(tan(rama.p, t)) + lado * 58;
+      const d = (rama.t + t * rama.dur).toFixed(2);
+      return `<g transform="translate(${f(x)} ${f(y)}) rotate(${f(ang)}) scale(${escala})">
+                <g class="leaf" style="--d:${d}s">
+                  <path d="M0 0 L36 0" stroke="#2F5D34" stroke-width="2.2" stroke-linecap="round"/>
+                  ${foliolo(14, 0, -48, .75)}${foliolo(14, 0, 48, .75)}${foliolo(36, 0, 0, 1)}
+                </g></g>`;
+    }
+    function espina(rama, t, lado) {
+      const [x, y] = bez(rama.p, t);
+      const ang = grados(tan(rama.p, t)) + lado * 100;
+      const d = (rama.t + t * rama.dur).toFixed(2);
+      return `<g transform="translate(${f(x)} ${f(y)}) rotate(${f(ang)})">
+                <path class="thorn" style="--d:${d}s" d="M0 -4.5 C 5 -5, 11 -3, 17 0 C 11 3, 5 4, 0 4.5 Z" fill="#7A2F2F"/></g>`;
+    }
+ 
+    /* ---------- Armado de todo el rosal ---------- */
+    let html = '';
+    RAMAS.forEach(r => html += tallo(r));
+    html += tallo(TALLO);
+ 
+    [[TALLO, .20, 1], [TALLO, .48, -1], [TALLO, .78, 1],
+     [RAMAS[1], .30, 1], [RAMAS[2], .30, -1],
+     [RAMAS[0], .35, 1], [RAMAS[0], .70, -1]].forEach(a => html += espina(...a));
+ 
+    [[TALLO, .30, 1, .95], [TALLO, .60, -1, .95],
+     [RAMAS[1], .50, -1, .85], [RAMAS[2], .50, 1, .85]].forEach(a => html += hoja(...a));
+ 
+    RAMAS.forEach(r => html += rosa(r.rosa, r.t + r.dur - 0.1));
+ 
+    garden.insertAdjacentHTML('beforeend', html);
+ 
+    /* ---------- Botón: muestra u oculta el corazón con "Te amo" ---------- */
+    const amor = document.getElementById('amor');
+    const boton = document.getElementById('replay');
+ 
+    function mostrarAmor(abrir) {
+      const estabaAbierto = amor.classList.contains('visible');
+      if (abrir === estabaAbierto) return;
+ 
+      amor.classList.toggle('visible', abrir);
+      amor.setAttribute('aria-hidden', String(!abrir));
+      boton.setAttribute('aria-pressed', String(abrir));
+      boton.textContent = abrir ? 'Volver a las rosas' : 'Volver a brotar';
+ 
+      if (!abrir) {
+        garden.classList.remove('play');
+        void garden.getBoundingClientRect(); // reinicia la animación de las rosas
+        garden.classList.add('play');
+      }
+    }
+ 
+    boton.addEventListener('click', () => mostrarAmor(!amor.classList.contains('visible')));
+    amor.addEventListener('click', () => mostrarAmor(false));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') mostrarAmor(false); });
+  </script>
+</body>
+</html>
+ 
